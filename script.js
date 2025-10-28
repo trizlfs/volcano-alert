@@ -52,27 +52,6 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
       volcanoMarkers.push({ marker, isErupting });
     });
 
-    // Toggle active volcanoes
-    const toggleBtn = L.control({position: 'topright'});
-    toggleBtn.onAdd = function() {
-      const div = L.DomUtil.create('div', 'toggle-btn');
-      div.innerHTML = '<button style="padding:5px">Toggle Active Volcanoes</button>';
-      div.firstChild.onclick = () => {
-        activeMarkersVisible = !activeMarkersVisible;
-        volcanoMarkers.forEach(v => {
-          if (!v.isErupting) {
-            if (activeMarkersVisible) {
-              markersGroup.addLayer(v.marker);
-            } else {
-              markersGroup.removeLayer(v.marker);
-            }
-          }
-        });
-      };
-      return div;
-    };
-    toggleBtn.addTo(map);
-
   } catch (err) {
     console.error("Error fetching volcano data:", err);
   }
