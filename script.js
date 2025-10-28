@@ -2,7 +2,7 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
 
 (async () => {
   const map = L.map("map").setView([-2.5, 118], 5);
-  const markers = []; // store all markers for zoom scaling
+  const markers = []; // store all markers
 
   // 🗺️ Tile Layer
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -11,19 +11,19 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
 
-  // 🌋 Volcano Icons
+  // 🌋 Volcano Icons (fixed large size)
   const eruptionIcon = L.icon({
     iconUrl: "volcano-alert/volcano-eruption.png",
-    iconSize: [48, 48],
-    iconAnchor: [24, 48],
-    popupAnchor: [0, -48],
+    iconSize: [64, 64], // always visible
+    iconAnchor: [32, 64],
+    popupAnchor: [0, -64],
   });
 
   const activeIcon = L.icon({
     iconUrl: "volcano-alert/volcano.png",
-    iconSize: [40, 40],
-    iconAnchor: [20, 40],
-    popupAnchor: [0, -40],
+    iconSize: [56, 56],
+    iconAnchor: [28, 56],
+    popupAnchor: [0, -56],
   });
 
   // 🌐 API + Proxy
@@ -43,7 +43,7 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
       return;
     }
 
-    // Identify erupting volcanoes reliably
+    // Identify erupting volcanoes
     const eruptingVolcanoIds = data.result
       .filter(v => v.event_type === "VO" && v.event_name.toLowerCase().includes("eruption"))
       .map(v => v.event_id);
@@ -69,22 +69,4 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
   } catch (err) {
     console.error("Error fetching volcano data:", err);
   }
-
-  // 🔄 Optional: scale icons based on zoom
-  map.on("zoomend", () => {
-    const zoom = map.getZoom();
-    markers.forEach(marker => {
-      const iconUrl = marker.options.icon.options.iconUrl;
-      const size = iconUrl.includes("eruption") ? 48 : 40;
-      const scaled = size * (zoom / 5); // scale with zoom
-      marker.setIcon(
-        L.icon({
-          iconUrl,
-          iconSize: [scaled, scaled],
-          iconAnchor: [scaled / 2, scaled],
-          popupAnchor: [0, -scaled],
-        })
-      );
-    });
-  });
 })();
