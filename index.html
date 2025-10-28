@@ -1,31 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Indonesia Volcano Alert</title>
-  <link rel="stylesheet" href="style.css">
 
   <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="map"></div>
 
-  <!-- Simple menu for options -->
+  <!-- Floating legend / options -->
   <div id="menu">
     <h3>⚙️ Options</h3>
     <label>
-      <input type="checkbox" id="showAll" checked>
+      <input type="checkbox" id="showAll" checked />
       Show all active volcanoes
     </label>
-  </div>
 
-  <!-- Legend -->
-  <div id="legend">
-    <h4>🗺️ Legend</h4>
-    <p><img src="volcano-eruption.png" width="20"> Erupting Volcano</p>
-    <p><img src="volcano.png" width="20"> Active Volcano</p>
+    <hr />
+    <div id="legend">
+      <b>Legend:</b><br />
+      <img src="volcano-eruption.png" width="18" /> Erupting<br />
+      <img src="volcano.png" width="18" /> Active
+    </div>
   </div>
 
   <!-- Leaflet JS -->
