@@ -1,37 +1,19 @@
 const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc7";
 
 (async () => {
+  // Create map
   const map = L.map("map").setView([-2.5, 118], 5);
-  const markers = []; // store all markers
-
-  // 🗺️ Tile Layer
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // 🌋 Volcano Icons (fixed large size)
-  const eruptionIcon = L.icon({
-    iconUrl: "volcano-alert/volcano-eruption.png",
-    iconSize: [64, 64], // always visible
-    iconAnchor: [32, 64],
-    popupAnchor: [0, -64],
-  });
+  const markersGroup = L.layerGroup().addTo(map);
+  let activeMarkersVisible = true;
 
-  const activeIcon = L.icon({
-    iconUrl: "volcano-alert/volcano.png",
-    iconSize: [56, 56],
-    iconAnchor: [28, 56],
-    popupAnchor: [0, -56],
-  });
-
-  // 🌐 API + Proxy
-  const API_URL =
-    "https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=10&page=1";
-  const PROXY_URL = `https://volcano-proxy.blazetrenttls.workers.dev?url=${encodeURIComponent(
-    API_URL
-  )}`;
+  // Fetch volcano data via proxy
+  const API_URL = "https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=50&page=1";
+  const PROXY_URL = `https://volcano-proxy.blazetrenttls.workers.dev?url=${encodeURIComponent(API_URL)}`;
 
   try {
     const res = await fetch(PROXY_URL);
@@ -49,23 +31,48 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
       .map(v => v.event_id);
 
     // Add markers
+    const volcanoMarkers = [];
     data.result.forEach(volcano => {
-      if (volcano.event_type !== "VO") return; // only volcanoes
+      if (volcano.event_type !== "VO") return;
 
       const isErupting = eruptingVolcanoIds.includes(volcano.event_id);
 
-      const marker = L.marker([volcano.lat, volcano.lng], {
-        icon: isErupting ? eruptionIcon : activeIcon,
-      }).addTo(map);
-
-      marker.bindPopup(`
+      const marker = L.circleMarker([volcano.lat, volcano.lng], {
+        radius: isErupting ? 10 : 6,
+        fillColor: isErupting ? "orange" : "white",
+        color: "black",
+        weight: 1,
+        fillOpacity: 0.8
+      }).bindPopup(`
         <b>${volcano.event_name}</b><br>
         <b>Date:</b> ${volcano.date}<br>
         <b>Location:</b> ${volcano.lat}, ${volcano.lng}
-      `);
+      `).addTo(markersGroup);
 
-      markers.push(marker);
+      volcanoMarkers.push({ marker, isErupting });
     });
+
+    // Toggle active volcanoes
+    const toggleBtn = L.control({position: 'topright'});
+    toggleBtn.onAdd = function() {
+      const div = L.DomUtil.create('div', 'toggle-btn');
+      div.innerHTML = '<button style="padding:5px">Toggle Active Volcanoes</button>';
+      div.firstChild.onclick = () => {
+        activeMarkersVisible = !activeMarkersVisible;
+        volcanoMarkers.forEach(v => {
+          if (!v.isErupting) {
+            if (activeMarkersVisible) {
+              markersGroup.addLayer(v.marker);
+            } else {
+              markersGroup.removeLayer(v.marker);
+            }
+          }
+        });
+      };
+      return div;
+    };
+    toggleBtn.addTo(map);
+
   } catch (err) {
     console.error("Error fetching volcano data:", err);
   }
