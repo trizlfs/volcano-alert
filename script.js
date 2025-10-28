@@ -22,6 +22,15 @@ const whiteIcon = L.icon({
   iconAnchor: [14, 28],
   popupAnchor: [0, -28]
 });
+const res = await fetch(
+  "https://corsproxy.io/?" + encodeURIComponent("https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=50&page=1"),
+  {
+    headers: {
+      "x-api-key": "YOUR_API_KEY",
+      "Content-Type": "application/json"
+    }
+  }
+);
 
 const showAllCheckbox = document.getElementById("showAll");
 
@@ -29,14 +38,15 @@ const showAllCheckbox = document.getElementById("showAll");
 async function fetchVolcanoes() {
   try {
     const response = await fetch(
-      "https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=50&page=1",
-      {
-        headers: {
-          "x-api-key": API_KEY,
-          "Content-Type": "application/json"
-        }
-      }
-    );
+  "https://corsproxy.io/?" + encodeURIComponent("https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=50&page=1"),
+  {
+    headers: {
+      "x-api-key": "YOUR_API_KEY",
+      "Content-Type": "application/json"
+    }
+  }
+);
+
 
     const data = await response.json();
     if (data.result && data.result.length > 0) {
