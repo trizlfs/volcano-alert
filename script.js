@@ -1,7 +1,7 @@
 const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc7";
 
 (async () => {
-  // Create map
+  // Create The Map
   const map = L.map("map").setView([-2.5, 118], 5);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
@@ -11,7 +11,7 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
   const markersGroup = L.layerGroup().addTo(map);
   let activeMarkersVisible = true;
 
-  // Fetch volcano data via proxy
+  // Fetch Data
   const API_URL = "https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=50&page=1";
   const PROXY_URL = `https://volcano-proxy.blazetrenttls.workers.dev?url=${encodeURIComponent(API_URL)}`;
 
@@ -25,12 +25,12 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
       return;
     }
 
-    // Identify erupting volcanoes
+    // Identify Eruptions
     const eruptingVolcanoIds = data.result
       .filter(v => v.event_type === "VO" && v.event_name.toLowerCase().includes("eruption"))
       .map(v => v.event_id);
 
-    // Add markers
+    // Adds Markers for Eruptions
     const volcanoMarkers = [];
     data.result.forEach(volcano => {
       if (volcano.event_type !== "VO") return;
