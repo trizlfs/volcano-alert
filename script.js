@@ -11,6 +11,21 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
   const markersGroup = L.layerGroup().addTo(map);
   let activeMarkersVisible = true;
 
+  // Volcano icons (defined once)
+  const eruptionIcon = L.icon({
+    iconUrl: "volcano-eruption.png",
+    iconSize: [48, 48],
+    iconAnchor: [24, 48],
+    popupAnchor: [0, -48],
+  });
+
+  const activeIcon = L.icon({
+    iconUrl: "volcano.png",
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+    popupAnchor: [0, -40],
+  });
+
   // Fetch volcano data via proxy
   const API_URL = "https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=50&page=1";
   const PROXY_URL = `https://volcano-proxy.blazetrenttls.workers.dev?url=${encodeURIComponent(API_URL)}`;
@@ -37,12 +52,8 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
 
       const isErupting = eruptingVolcanoIds.includes(volcano.event_id);
 
-      const marker = L.circleMarker([volcano.lat, volcano.lng], {
-        radius: isErupting ? 10 : 6,
-        fillColor: isErupting ? "orange" : "white",
-        color: "black",
-        weight: 1,
-        fillOpacity: 0.8
+      const marker = L.marker([volcano.lat, volcano.lng], {
+        icon: isErupting ? eruptionIcon : activeIcon
       }).bindPopup(`
         <b>${volcano.event_name}</b><br>
         <b>Date:</b> ${volcano.date}<br>
