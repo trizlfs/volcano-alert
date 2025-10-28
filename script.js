@@ -40,8 +40,9 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
       const marker = L.circleMarker([volcano.lat, volcano.lng], {
         radius: isErupting ? 10 : 6,
         fillColor: isErupting ? "#ff6723" : "white",
-        color: "black",
-        fillOpacity: 1
+        color: "#ff6723",
+        weight: 1,
+        fillOpacity: .8
       }).bindPopup(`
         <b>${volcano.event_name}</b><br>
         <b>Date:</b> ${volcano.date}<br>
