@@ -27,7 +27,7 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
 
   // 🌐 API + Proxy Setup
   const API_URL =
-    "https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=50&page=1";
+    "https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=10&page=1";
 
   // ⚙️ Cloudflare Worker proxy URL
   const PROXY_URL = `https://volcano-proxy.blazetrenttls.workers.dev?url=${encodeURIComponent(
