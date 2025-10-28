@@ -1,82 +1,70 @@
 const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc7";
-const map = L.map("map").setView([-2.5, 118], 5); // Center on Indonesia
 
-// Add OpenStreetMap layer
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 10,
-  attribution: "© OpenStreetMap contributors",
-}).addTo(map);
+(async () => {
+  const map = L.map("map").setView([-2.5, 118], 5);
 
-// Local icons
-const orangeIcon = L.icon({
-  iconUrl: "volcano-eruption.png",
-  iconSize: [25, 25],
-});
-const whiteIcon = L.icon({
-  iconUrl: "volcano.png",
-  iconSize: [25, 25],
-});
+  // 🗺️ Tile Layer
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 18,
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
 
-const showAllCheckbox = document.getElementById("showAll");
+  // 🌋 Volcano Icons
+  const eruptionIcon = L.icon({
+    iconUrl: "volcano-alert/volcano-eruption.png",
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32],
+  });
 
-async function fetchVolcanoes() {
+  const activeIcon = L.icon({
+    iconUrl: "volcano-alert/volcano.png",
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32],
+  });
+
+  // 🌐 API + Proxy Setup
+  const API_URL =
+    "https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=50&page=1";
+
+  // ⚙️ Cloudflare Worker proxy URL
+  const PROXY_URL = `https://volcano-proxy.blazetrenttls.workers.dev?url=${encodeURIComponent(
+    API_URL
+  )}`;
+
   try {
-    // Use corsproxy.io to bypass browser CORS block
-    const url =
-      "https://corsproxy.io/?" +
-      encodeURIComponent(
-        "https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=50&page=1"
-      );
-
-    const res = await fetch(url, {
+    const res = await fetch(PROXY_URL, {
       headers: {
         "x-api-key": API_KEY,
-        "Content-Type": "application/json",
+        "Content-type": "application/json",
       },
     });
 
+    if (!res.ok) throw new Error(`API Error ${res.status}`);
     const data = await res.json();
-    console.log("Fetched data:", data);
 
-    if (!data.result || !Array.isArray(data.result)) {
-      console.warn("No volcano data received!");
-      return;
+    if (data.result && data.result.length) {
+      data.result.forEach((volcano) => {
+        if (volcano.event_type !== "VO") return; // only volcanos
+
+        const marker = L.marker([volcano.lat, volcano.lng], {
+          icon: volcano.event_name.toLowerCase().includes("eruption")
+            ? eruptionIcon
+            : activeIcon,
+        }).addTo(map);
+
+        marker.bindPopup(`
+          <b>${volcano.event_name}</b><br>
+          <b>Date:</b> ${volcano.date}<br>
+          <b>Location:</b> ${volcano.lat}, ${volcano.lng}
+        `);
+      });
+    } else {
+      console.warn("No volcano data found");
     }
-
-    plotVolcanoes(data.result);
   } catch (err) {
     console.error("Error fetching volcano data:", err);
   }
-}
-
-function plotVolcanoes(volcanoes) {
-  // Remove old markers
-  map.eachLayer((layer) => {
-    if (layer instanceof L.Marker) map.removeLayer(layer);
-  });
-
-  volcanoes.forEach((v) => {
-    if (v.event_type !== "VO") return; // Volcano events only
-    const erupting = v.event_name.toLowerCase().includes("eruption");
-
-    // Hide non-erupting ones unless "show all" is checked
-    if (!erupting && !showAllCheckbox.checked) return;
-
-    const marker = L.marker([v.lat, v.lng], {
-      icon: erupting ? orangeIcon : whiteIcon,
-    }).addTo(map);
-
-    marker.bindPopup(`
-      <b>${v.event_name}</b><br>
-      🌋 ${erupting ? "Erupting" : "Active"}<br>
-      🕓 ${v.date}<br>
-      🧭 Lat: ${v.lat}, Lng: ${v.lng}
-    `);
-  });
-}
-
-// Re-fetch when checkbox changes
-showAllCheckbox.addEventListener("change", fetchVolcanoes);
-
-// Load on start
-fetchVolcanoes();
+})();
