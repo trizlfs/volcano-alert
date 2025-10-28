@@ -12,14 +12,14 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
 
   // 🌋 Volcano Icons
   const eruptionIcon = L.icon({
-    iconUrl: "volcano-alert/volcano-eruption.png",
+    iconUrl: "volcano-eruption.png",
     iconSize: [32, 32],
     iconAnchor: [16, 32],
     popupAnchor: [0, -32],
   });
 
   const activeIcon = L.icon({
-    iconUrl: "volcano-alert/volcano.png",
+    iconUrl: "volcano.png",
     iconSize: [32, 32],
     iconAnchor: [16, 32],
     popupAnchor: [0, -32],
