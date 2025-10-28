@@ -39,7 +39,7 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
 
       const marker = L.circleMarker([volcano.lat, volcano.lng], {
         radius: isErupting ? 10 : 6,
-        fillColor: isErupting ? "orange" : "white",
+        fillColor: isErupting ? "#ff6723" : "white",
         color: "black",
         weight: 1,
         fillOpacity: 0.8
