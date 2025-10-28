@@ -1,7 +1,7 @@
 const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc7";
 
 (async () => {
-  // Create The Map
+  // Map
   const map = L.map("map").setView([-2.5, 118], 5);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
