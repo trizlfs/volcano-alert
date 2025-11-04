@@ -2,9 +2,9 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
 
 (async () => {
   // Map
-  const map = L.map("map").setView([-2.5, 118], 5);
+  const map = L.map("map").setView([37, -142], 4);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 18,
+    maxZoom: 5,
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
