@@ -12,7 +12,7 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
   let activeMarkersVisible = true;
 
   // Fetch Data
-  const API_URL = "https://volcanoes.usgs.gov/hans-public/api/map/getVhpStatus";
+  const API_URL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getCapElevated";
   //  const PROXY_URL = `https://volcano-proxy.blazetrenttls.workers.dev?url=${encodeURIComponent(API_URL)}`;
   // No proxy / no key required for public API
 
