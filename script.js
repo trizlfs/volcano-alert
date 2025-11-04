@@ -90,7 +90,6 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
           <b>Elevation (m):</b> ${detail.elevation_meters ?? detail.elevation ?? "N/A"}<br/>
           ${synopsis ? `<div style="margin-top:6px"><i>${synopsis}</i></div>` : ""}
           <div style="margin-top:6px">
-            <b>Date:</b> ${pubDate || "N/A"}<br/>
             ${noticeUrl ? `<a href="${noticeUrl}" target="_blank" rel="noreferrer">Notice</a>` : ""}
           </div>
         </div>
