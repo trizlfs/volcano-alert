@@ -3,7 +3,7 @@ html, body {
   padding: 0;
   height: 100%;
   overflow: hidden;
-  font-family: Arial, sans-serif;
+  font-family: Arial, Arial, Helvetica, sans-serif;
 }
 
 #map {

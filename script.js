@@ -12,11 +12,13 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
   let activeMarkersVisible = true;
 
   // Fetch Data
-  const API_URL = "https://api.ambeedata.com/disasters/latest/by-country-code?countryCode=IDN&limit=50&page=1";
-  const PROXY_URL = `https://volcano-proxy.blazetrenttls.workers.dev?url=${encodeURIComponent(API_URL)}`;
+  const API_URL = "https://volcanoes.usgs.gov/hans-public/api/map/getVhpStatus";
+  //  const PROXY_URL = `https://volcano-proxy.blazetrenttls.workers.dev?url=${encodeURIComponent(API_URL)}`;
+  // No proxy / no key required for public API
 
   try {
-    const res = await fetch(PROXY_URL);
+    //    const res = await fetch(API_URL);
+    const res = await fetch(API_URL);
     if (!res.ok) throw new Error(`API Error ${res.status}`);
     const data = await res.json();
 
@@ -27,31 +29,75 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
 
     // Identify Eruptions
     const eruptingVolcanoIds = data.result
-      .filter(v => v.event_type === "VO" && v.event_name.toLowerCase().includes("eruption"))
+      .filter(v => v.event_type === "VO" && v.event_name && v.event_name.toLowerCase().includes("eruption"))
       .map(v => v.event_id);
 
-    // Adds Markers for Eruptions
+    // helper: try multiple fields for lat/lng and coerce to Number
+    const getCoord = (obj, keys) => {
+      for (const k of keys) {
+        if (obj[k] !== undefined && obj[k] !== null && obj[k] !== "") {
+          const n = Number(obj[k]);
+          if (!Number.isNaN(n)) return n;
+        }
+      }
+      return null;
+    };
+    const latKeys = ["lat", "latitude", "Latitude", "LAT", "lat_dd", "latitude_dd"];
+    const lngKeys = ["lng", "lon", "longitude", "Longitude", "LON", "long", "lng_dd", "longitude_dd"];
+
+    // color map for alert colors (must be YELLOW, ORANGE, or RED)
+    const COLOR_MAP = {
+      YELLOW: "#ffd43b",
+      ORANGE: "#ff8c00",
+      RED: "#ff2e2e"
+    };
+
+    // Adds Markers for relevant volcanoes (only YELLOW/ORANGE/RED)
     const volcanoMarkers = [];
+    const bounds = [];
     data.result.forEach(volcano => {
       if (volcano.event_type !== "VO") return;
+      const colorCode = (volcano.color_code || "").toString().toUpperCase();
+      if (!["YELLOW", "ORANGE", "RED"].includes(colorCode)) return; // only show required colors
+
+      const lat = getCoord(volcano, latKeys);
+      const lng = getCoord(volcano, lngKeys);
+      if (lat === null || lng === null) return; // skip if no coords
 
       const isErupting = eruptingVolcanoIds.includes(volcano.event_id);
+      const markerColor = COLOR_MAP[colorCode] || "#ffd43b";
 
-      const marker = L.circleMarker([volcano.lat, volcano.lng], {
-        radius: isErupting ? 10 : 6,
-        fillColor: isErupting ? "#ff6723" : "white",
-        color: "#ff6723",
+      const popupHtml = `
+        <div style="min-width:200px">
+          <b>${volcano.event_name || volcano.volcano_name || "Unknown"}</b><br/>
+          <b>Alert:</b> ${volcano.alert_level || volcano.color_code || "N/A"}<br/>
+          <b>Color Code:</b> ${colorCode}<br/>
+          <b>Status:</b> ${volcano.status || volcano.more_info || "N/A"}<br/>
+          <b>Region:</b> ${volcano.region || volcano.location || "N/A"}<br/>
+          <b>Elevation (m):</b> ${volcano.elevation_meters || volcano.elevation || "N/A"}<br/>
+          <b>Obs:</b> ${volcano.obs || "N/A"}<br/>
+          <b>Date:</b> ${volcano.alertdate || volcano.date || "N/A"}<br/>
+          ${volcano.view ? `<a href="${volcano.view}" target="_blank">Details</a>` : (volcano.vhplink ? `<a href="${volcano.vhplink}" target="_blank">Details</a>` : "")}
+        </div>
+      `;
+
+      const marker = L.circleMarker([lat, lng], {
+        radius: isErupting ? 10 : 7,
+        fillColor: markerColor,
+        color: "#333",
         weight: 1,
-        fillOpacity: .8
-      }).bindPopup(`
-        <b>${volcano.event_name}</b><br>
-        <b>Date:</b> ${volcano.date}<br>
-        <b>Location:</b> ${volcano.lat}, ${volcano.lng}
-      `).addTo(markersGroup);
+        fillOpacity: 0.9
+      }).bindPopup(popupHtml).addTo(markersGroup);
 
-      volcanoMarkers.push({ marker, isErupting });
+      volcanoMarkers.push({ marker, isErupting, data: volcano });
+      bounds.push([lat, lng]);
     });
 
+    // fit map to markers if any
+    if (bounds.length) {
+      map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
+    }
+    // end marker creation
   } catch (err) {
     console.error("Error fetching volcano data:", err);
   }
