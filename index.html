@@ -33,10 +33,19 @@
 <body>
   <div id="map"></div>
   <div class="legend">
-    <b>Legend | Trenton Stevenson</b><br>
-    <img src="volcano-eruption.png" width="20"> Volcano Alert<br>
-    <img src="volcano.png" width="20"> Volcano<br>
-    <img src="peak.png" width="20"> Mountain Peak
+    <b>Volcano Legend | Trenton Stevenson</b><br/>
+    <div style="margin-top:6px">
+      <img src="https://avo.alaska.edu/img/icons/svg/triangle.svg" width="18" style="vertical-align:middle"> <span style="margin-left:6px">Green — Normal</span>
+    </div>
+    <div style="margin-top:6px">
+      <img src="https://avo.alaska.edu/img/icons/svg/yellowtriangle.svg" width="18" style="vertical-align:middle"> <span style="margin-left:6px">Yellow — Advisory / Elevated</span>
+    </div>
+    <div style="margin-top:6px">
+      <img src="https://avo.alaska.edu/img/icons/svg/eyecon-orange.svg" width="18" style="vertical-align:middle"> <span style="margin-left:6px">Orange — Watch</span>
+    </div>
+    <div style="margin-top:6px">
+      <img src="https://avo.alaska.edu/img/icons/svg/danger.svg" width="18" style="vertical-align:middle"> <span style="margin-left:6px">Red — Warning / Eruption</span>
+    </div>
   </div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module" src="script.js"></script>

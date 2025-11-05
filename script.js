@@ -58,7 +58,28 @@
       return;
     }
 
-    const COLOR_MAP = { YELLOW: "#ffd43b", ORANGE: "#ff8c00", RED: "#ff2e2e" };
+    // Use custom icons for volcano markers
+    const ICON_URLS = {
+      GREEN: "https://avo.alaska.edu/img/icons/svg/triangle.svg",
+      YELLOW: "https://avo.alaska.edu/img/icons/svg/yellowtriangle.svg",
+      ORANGE: "https://avo.alaska.edu/img/icons/svg/eyecon-orange.svg",
+      RED: "https://avo.alaska.edu/img/icons/svg/danger.svg"
+    };
+
+    const makeIcon = url => L.icon({
+      iconUrl: url,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],   // bottom-center
+      popupAnchor: [0, -28]
+    });
+
+    const ICON_MAP = {
+      GREEN: makeIcon(ICON_URLS.GREEN),
+      YELLOW: makeIcon(ICON_URLS.YELLOW),
+      ORANGE: makeIcon(ICON_URLS.ORANGE),
+      RED: makeIcon(ICON_URLS.RED)
+    };
+
     const bounds = [];
 
     resolved.forEach(({ summary, detail }) => {
@@ -93,12 +114,8 @@
         </div>
       `;
 
-      const marker = L.circleMarker([lat, lng], {
-        radius: 8,
-        fillColor: COLOR_MAP[colorCode] || "#ffd43b",
-        color: "#333",
-        weight: 1,
-        fillOpacity: 0.9
+      const marker = L.marker([lat, lng], {
+        icon: ICON_MAP[colorCode] || ICON_MAP.YELLOW
       }).bindPopup(popupHtml).addTo(markersGroup);
 
       bounds.push([lat, lng]);
