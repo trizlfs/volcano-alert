@@ -10,11 +10,11 @@
   let activeMarkersVisible = true;
 
   // Fetch Data
-  const ELEVATED_URL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getElevatedVolcanoes";
-  const VOLCANO_BY_VNUM = vnum => `https://volcanoes.usgs.gov/hans-public/api/volcano/getVolcano/${vnum}`;
+  const elevatedURL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getElevatedVolcanoes";
+  const volcanoVnumURL = vnum => `https://volcanoes.usgs.gov/hans-public/api/volcano/getVolcano/${vnum}`;
 
   try {
-    const res = await fetch(ELEVATED_URL);
+    const res = await fetch(elevatedURL);
     if (!res.ok) throw new Error(`API Error ${res.status}`);
     const elevated = await res.json();
     console.log("getElevatedVolcanoes response:", elevated);
@@ -40,7 +40,7 @@
     const detailPromises = filtered.map(async it => {
       const vnum = it.vnum || it.vn;
       try {
-        const r = await fetch(VOLCANO_BY_VNUM(vnum));
+        const r = await fetch(volcanoVnumURL(vnum));
         if (!r.ok) throw new Error(`volcano ${vnum} fetch ${r.status}`);
         const detail = await r.json();
         // detail may be the volcano object or { result: {...} }
