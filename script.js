@@ -7,8 +7,6 @@
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // Create panes so we can control stacking order:
-  // higher zIndex = drawn on top
   map.createPane('pane-green');  map.getPane('pane-green').style.zIndex = 400;
   map.createPane('pane-yellow'); map.getPane('pane-yellow').style.zIndex = 450;
   map.createPane('pane-orange'); map.getPane('pane-orange').style.zIndex = 500;
@@ -17,7 +15,6 @@
   const markersGroup = L.layerGroup().addTo(map);
   let activeMarkersVisible = true;
 
-  // Keep per-color lists so we can toggle visibility
   const markersByColor = { GREEN: [], YELLOW: [], ORANGE: [], RED: [] };
 
   // Fetch Data
@@ -36,7 +33,6 @@
       console.warn("No elevated volcanoes found.");
     }
 
-    // Filter to ensure it only shows Yellow+ 
     const allowed = ["YELLOW", "ORANGE", "RED"];
     const filtered = items.filter(i => {
       const c = (i.color_code || i.color || "").toString().toUpperCase();
@@ -93,7 +89,6 @@
     const bounds = [];
     const shownVnums = new Set();
 
-    // Helper to add marker into the appropriate pane and arrays (but do not force-add to markersGroup)
     const addMarker = (lat, lng, colorCode, popupHtml, vnum) => {
       const paneName = ({
         GREEN: 'pane-green',
@@ -108,14 +103,11 @@
         title: popupHtml && popupHtml.replace(/<[^>]+>/g, '').slice(0, 200)
       }).bindPopup(popupHtml);
 
-      // add to map initially
       marker.addTo(map);
 
-      // record
       markersByColor[colorCode] = markersByColor[colorCode] || [];
       markersByColor[colorCode].push(marker);
 
-      // include in bounds
       bounds.push([lat, lng]);
 
       if (vnum) shownVnums.add(String(vnum));
@@ -160,7 +152,6 @@
       });
     }
 
-    // Add monitored (GREEN) markers for monitored volcanos that weren't already shown
     const monitoredToAdd = monitoredItems
       .map(mi => ({ ...mi, vnum: mi.vnum || mi.vn }))
       .filter(mi => mi.vnum && !shownVnums.has(String(mi.vnum)));
@@ -214,10 +205,8 @@
       });
     }
 
-    // Fit bounds initially
     if (bounds.length) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
 
-    // --- UI: menu toggles (assumes index.html has checkboxes with these IDs) ---
     const toggleColor = (color, show) => {
       (markersByColor[color] || []).forEach(m => {
         if (show) m.addTo(map);
@@ -230,7 +219,6 @@
       Object.entries(ids).forEach(([color, id]) => {
         const el = document.getElementById(id);
         if (!el) return;
-        // initial state: checked by default
         el.checked = true;
         el.addEventListener('change', () => {
           toggleColor(color, el.checked);
@@ -238,13 +226,11 @@
       });
     };
 
-    // small "show all / none" convenience buttons if present
     const btnAll = document.getElementById('btn-show-all');
     const btnNone = document.getElementById('btn-show-none');
     if (btnAll) btnAll.addEventListener('click', () => { ['GREEN','YELLOW','ORANGE','RED'].forEach(c => { document.getElementById(`chk-${c.toLowerCase()}`).checked = true; toggleColor(c, true); }); });
     if (btnNone) btnNone.addEventListener('click', () => { ['GREEN','YELLOW','ORANGE','RED'].forEach(c => { document.getElementById(`chk-${c.toLowerCase()}`).checked = false; toggleColor(c, false); }); });
 
-    // initialize toggles after DOM ready
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initToggles);
     else initToggles();
 
