@@ -12,6 +12,7 @@
   // Fetch Data
   const elevatedURL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getElevatedVolcanoes";
   const volcanoVnumURL = vnum => `https://volcanoes.usgs.gov/hans-public/api/volcano/getVolcano/${vnum}`;
+  const monitoredURL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getMonitoredVolcanoes";
 
   try {
     const res = await fetch(elevatedURL);
@@ -35,6 +36,14 @@
       console.warn("No elevated items with required color codes and vnum.");
       return;
     }
+
+    const resMon = await fetch(monitoredURL);
+    if (!resMon.ok) throw new Error(`Monitored API Error ${resMon.status}`);
+    const monitored = await resMon.json();
+    console.log("getMonitoredVolcanoes response:", monitored);
+
+    const monitoredItems = Array.isArray(monitored) ? monitored : (Array.isArray(monitored.result) ? monitored.result : []);
+    const monitoredVnums = new Set(monitoredItems.map(mi => mi.vnum || mi.vn));
 
     // Fetch location for volcanoes
     const detailPromises = filtered.map(async it => {
@@ -81,7 +90,9 @@
     };
 
     const bounds = [];
+    const shownVnums = new Set(); // track vnums already added so monitored doesn't duplicate
 
+    // Add elevated (YELLOW/ORANGE/RED) markers and record shown vnums
     resolved.forEach(({ summary, detail }) => {
       const colorCode = (summary.color_code || summary.color || "").toString().toUpperCase();
       if (!["YELLOW", "ORANGE", "RED"].includes(colorCode)) return;
@@ -119,7 +130,72 @@
       }).bindPopup(popupHtml).addTo(markersGroup);
 
       bounds.push([lat, lng]);
+      if (vnum) shownVnums.add(String(vnum));
     });
+
+    // Add monitored (GREEN) markers for monitored volcanos that weren't already shown
+    const monitoredToAdd = monitoredItems
+      .map(mi => ({ ...mi, vnum: mi.vnum || mi.vn }))
+      .filter(mi => mi.vnum && !shownVnums.has(String(mi.vnum)))
+      .filter(mi => {
+        const c = (mi.color_code || mi.color || "").toString().toUpperCase();
+        // Only show explicit GREEN monitored volcanos (some monitored entries may not include color_code)
+        return c === "GREEN";
+      });
+
+    if (monitoredToAdd.length) {
+      const monDetailPromises = monitoredToAdd.map(async mi => {
+        const vnum = mi.vnum;
+        try {
+          const r = await fetch(volcanoVnumURL(vnum));
+          if (!r.ok) throw new Error(`volcano ${vnum} fetch ${r.status}`);
+          const detail = await r.json();
+          const volcanoDetail = (detail && detail.result) ? detail.result : detail;
+          return { summary: mi, detail: volcanoDetail };
+        } catch (e) {
+          console.warn(`Failed to fetch monitored volcano ${vnum}:`, e);
+          return null;
+        }
+      });
+
+      const monResolved = (await Promise.all(monDetailPromises)).filter(Boolean);
+      monResolved.forEach(({ summary, detail }) => {
+        const lat = Number(detail.latitude ?? detail.lat ?? detail.latitude_dd);
+        const lng = Number(detail.longitude ?? detail.lon ?? detail.lng ?? detail.longitude_dd);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) {
+          console.warn("Missing coords for monitored vnum", summary.vnum || summary.vn, detail);
+          return;
+        }
+
+        const name = summary.volcano_name_appended || summary.volcano_name || detail.volcano_name_appended || detail.volcano_name || "Unknown";
+        const vnum = summary.vnum || summary.vn || detail.vnum || "";
+        const obs = summary.obs_fullname || summary.obs || detail.obs_fullname || detail.obs || "N/A";
+        const pubDate = summary.pubDate || summary.sent_date_cap || detail.pubDate || "";
+        const synopsis = summary.synopsis || detail.synopsis || detail.status || "";
+        const noticeUrl = summary.notice_url || detail.notice_url || summary.notice_data || detail.notice_data || "";
+
+        const popupHtml = `
+          <div style="min-width:240px">
+            <b>${name}</b> ${vnum ? `(<small>${vnum}</small>)` : ""}<br/>
+            <b>Alert Level:</b> Normal<br/>
+            <b>Color Code:</b> GREEN<br/>
+            <b>Observatory:</b> ${obs}<br/>
+            <b>Elevation (m):</b> ${detail.elevation_meters ?? detail.elevation ?? "N/A"}<br/>
+            ${synopsis ? `<div style="margin-top:6px"><i>${synopsis}</i></div>` : ""}
+            <div style="margin-top:6px">
+              ${noticeUrl ? `<a href="${noticeUrl}" target="_blank" rel="noreferrer">Notice</a>` : ""}
+            </div>
+          </div>
+        `;
+
+        const marker = L.marker([lat, lng], {
+          icon: ICON_MAP.GREEN
+        }).bindPopup(popupHtml).addTo(markersGroup);
+
+        bounds.push([lat, lng]);
+        if (vnum) shownVnums.add(String(vnum));
+      });
+    }
 
     if (bounds.length) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
   } catch (err) {
