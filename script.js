@@ -6,8 +6,18 @@
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
+  // Create panes so we can control stacking order:
+  // higher zIndex = drawn on top
+  map.createPane('pane-green');  map.getPane('pane-green').style.zIndex = 400;
+  map.createPane('pane-yellow'); map.getPane('pane-yellow').style.zIndex = 450;
+  map.createPane('pane-orange'); map.getPane('pane-orange').style.zIndex = 500;
+  map.createPane('pane-red');    map.getPane('pane-red').style.zIndex = 550;
+
   const markersGroup = L.layerGroup().addTo(map);
   let activeMarkersVisible = true;
+
+  // Keep per-color lists so we can toggle visibility
+  const markersByColor = { GREEN: [], YELLOW: [], ORANGE: [], RED: [] };
 
   // Fetch Data
   const elevatedURL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getElevatedVolcanoes";
@@ -23,7 +33,6 @@
     const items = Array.isArray(elevated) ? elevated : (Array.isArray(elevated.result) ? elevated.result : []);
     if (!items.length) {
       console.warn("No elevated volcanoes found.");
-      return;
     }
 
     // Filter to ensure it only shows Yellow+ 
@@ -32,10 +41,6 @@
       const c = (i.color_code || i.color || "").toString().toUpperCase();
       return allowed.includes(c) && (i.vnum || i.vn);
     });
-    if (!filtered.length) {
-      console.warn("No elevated items with required color codes and vnum.");
-      return;
-    }
 
     const resMon = await fetch(monitoredURL);
     if (!resMon.ok) throw new Error(`Monitored API Error ${resMon.status}`);
@@ -45,14 +50,13 @@
     const monitoredItems = Array.isArray(monitored) ? monitored : (Array.isArray(monitored.result) ? monitored.result : []);
     const monitoredVnums = new Set(monitoredItems.map(mi => mi.vnum || mi.vn));
 
-    // Fetch location for volcanoes
+    // Fetch location for elevated volcanoes
     const detailPromises = filtered.map(async it => {
       const vnum = it.vnum || it.vn;
       try {
         const r = await fetch(volcanoVnumURL(vnum));
         if (!r.ok) throw new Error(`volcano ${vnum} fetch ${r.status}`);
         const detail = await r.json();
-        // detail may be the volcano object or { result: {...} }
         const volcanoDetail = (detail && detail.result) ? detail.result : detail;
         return { summary: it, detail: volcanoDetail };
       } catch (e) {
@@ -62,12 +66,8 @@
     });
 
     const resolved = (await Promise.all(detailPromises)).filter(Boolean);
-    if (!resolved.length) {
-      console.warn("No volcano details retrieved.");
-      return;
-    }
 
-    // Use custom icons for volcano markers
+    // Icon URLs
     const ICON_URLS = {
       GREEN: "https://avo.alaska.edu/img/icons/svg/triangle.svg",
       YELLOW: "https://avo.alaska.edu/img/icons/svg/yellowtriangle.svg",
@@ -78,7 +78,7 @@
     const makeIcon = url => L.icon({
       iconUrl: url,
       iconSize: [28, 28],
-      iconAnchor: [14, 28],   // bottom-center
+      iconAnchor: [14, 28],
       popupAnchor: [0, -28]
     });
 
@@ -90,58 +90,79 @@
     };
 
     const bounds = [];
-    const shownVnums = new Set(); // track vnums already added so monitored doesn't duplicate
+    const shownVnums = new Set();
 
-    // Add elevated (YELLOW/ORANGE/RED) markers and record shown vnums
-    resolved.forEach(({ summary, detail }) => {
-      const colorCode = (summary.color_code || summary.color || "").toString().toUpperCase();
-      if (!["YELLOW", "ORANGE", "RED"].includes(colorCode)) return;
-      const lat = Number(detail.latitude ?? detail.lat ?? detail.latitude_dd);
-      const lng = Number(detail.longitude ?? detail.lon ?? detail.lng ?? detail.longitude_dd);
-      if (Number.isNaN(lat) || Number.isNaN(lng)) {
-        console.warn("Missing coords for vnum", summary.vnum || summary.vn, detail);
-        return;
-      }
-
-      const name = summary.volcano_name_appended || summary.volcano_name || detail.volcano_name_appended || detail.volcano_name || "Unknown";
-      const vnum = summary.vnum || summary.vn || detail.vnum || "";
-      const obs = summary.obs_fullname || summary.obs || detail.obs_fullname || detail.obs || "N/A";
-      const pubDate = summary.pubDate || summary.sent_date_cap || detail.pubDate || "";
-      const synopsis = summary.synopsis || detail.synopsis || detail.status || "";
-      const alertLevel = summary.alert_level || summary.cap_level || detail.alert_level || "N/A";
-      const noticeUrl = summary.notice_url || detail.notice_url || summary.notice_data || detail.notice_data || "";
-
-      const popupHtml = `
-        <div style="min-width:240px">
-          <b>${name}</b> ${vnum ? `(<small>${vnum}</small>)` : ""}<br/>
-          <b>Alert Level:</b> ${alertLevel}<br/>
-          <b>Color Code:</b> ${colorCode}<br/>
-          <b>Observatory:</b> ${obs}<br/>
-          <b>Elevation (m):</b> ${detail.elevation_meters ?? detail.elevation ?? "N/A"}<br/>
-          ${synopsis ? `<div style="margin-top:6px"><i>${synopsis}</i></div>` : ""}
-          <div style="margin-top:6px">
-            ${noticeUrl ? `<a href="${noticeUrl}" target="_blank" rel="noreferrer">Notice</a>` : ""}
-          </div>
-        </div>
-      `;
+    // Helper to add marker into the appropriate pane and arrays (but do not force-add to markersGroup)
+    const addMarker = (lat, lng, colorCode, popupHtml, vnum) => {
+      const paneName = ({
+        GREEN: 'pane-green',
+        YELLOW: 'pane-yellow',
+        ORANGE: 'pane-orange',
+        RED: 'pane-red'
+      })[colorCode] || 'pane-green';
 
       const marker = L.marker([lat, lng], {
-        icon: ICON_MAP[colorCode] || ICON_MAP.YELLOW
-      }).bindPopup(popupHtml).addTo(markersGroup);
+        icon: ICON_MAP[colorCode] || ICON_MAP.GREEN,
+        pane: paneName,
+        title: popupHtml && popupHtml.replace(/<[^>]+>/g, '').slice(0, 200)
+      }).bindPopup(popupHtml);
 
+      // add to map initially
+      marker.addTo(map);
+
+      // record
+      markersByColor[colorCode] = markersByColor[colorCode] || [];
+      markersByColor[colorCode].push(marker);
+
+      // include in bounds
       bounds.push([lat, lng]);
+
       if (vnum) shownVnums.add(String(vnum));
-    });
+      return marker;
+    };
+
+    // Add elevated (YELLOW/ORANGE/RED)
+    if (resolved && resolved.length) {
+      resolved.forEach(({ summary, detail }) => {
+        const colorCode = (summary.color_code || summary.color || "").toString().toUpperCase();
+        if (!["YELLOW", "ORANGE", "RED"].includes(colorCode)) return;
+        const lat = Number(detail.latitude ?? detail.lat ?? detail.latitude_dd);
+        const lng = Number(detail.longitude ?? detail.lon ?? detail.lng ?? detail.longitude_dd);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) {
+          console.warn("Missing coords for vnum", summary.vnum || summary.vn, detail);
+          return;
+        }
+
+        const name = summary.volcano_name_appended || summary.volcano_name || detail.volcano_name_appended || detail.volcano_name || "Unknown";
+        const vnum = summary.vnum || summary.vn || detail.vnum || "";
+        const obs = summary.obs_fullname || summary.obs || detail.obs_fullname || detail.obs || "N/A";
+        const pubDate = summary.pubDate || summary.sent_date_cap || detail.pubDate || "";
+        const synopsis = summary.synopsis || detail.synopsis || detail.status || "";
+        const alertLevel = summary.alert_level || summary.cap_level || detail.alert_level || "N/A";
+        const noticeUrl = summary.notice_url || detail.notice_url || summary.notice_data || detail.notice_data || "";
+
+        const popupHtml = `
+          <div style="min-width:240px">
+            <b>${name}</b> ${vnum ? `(<small>${vnum}</small>)` : ""}<br/>
+            <b>Alert Level:</b> ${alertLevel}<br/>
+            <b>Color Code:</b> ${colorCode}<br/>
+            <b>Observatory:</b> ${obs}<br/>
+            <b>Elevation (m):</b> ${detail.elevation_meters ?? detail.elevation ?? "N/A"}<br/>
+            ${synopsis ? `<div style="margin-top:6px"><i>${synopsis}</i></div>` : ""}
+            <div style="margin-top:6px">
+              ${noticeUrl ? `<a href="${noticeUrl}" target="_blank" rel="noreferrer">Notice</a>` : ""}
+            </div>
+          </div>
+        `;
+
+        addMarker(lat, lng, colorCode, popupHtml, vnum);
+      });
+    }
 
     // Add monitored (GREEN) markers for monitored volcanos that weren't already shown
     const monitoredToAdd = monitoredItems
       .map(mi => ({ ...mi, vnum: mi.vnum || mi.vn }))
-      .filter(mi => mi.vnum && !shownVnums.has(String(mi.vnum)))
-      .filter(mi => {
-        const c = (mi.color_code || mi.color || "").toString().toUpperCase();
-        // Only show explicit GREEN monitored volcanos (some monitored entries may not include color_code)
-        return c === "GREEN";
-      });
+      .filter(mi => mi.vnum && !shownVnums.has(String(mi.vnum)));
 
     if (monitoredToAdd.length) {
       const monDetailPromises = monitoredToAdd.map(async mi => {
@@ -188,16 +209,44 @@
           </div>
         `;
 
-        const marker = L.marker([lat, lng], {
-          icon: ICON_MAP.GREEN
-        }).bindPopup(popupHtml).addTo(markersGroup);
-
-        bounds.push([lat, lng]);
-        if (vnum) shownVnums.add(String(vnum));
+        addMarker(lat, lng, "GREEN", popupHtml, vnum);
       });
     }
 
+    // Fit bounds initially
     if (bounds.length) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
+
+    // --- UI: menu toggles (assumes index.html has checkboxes with these IDs) ---
+    const toggleColor = (color, show) => {
+      (markersByColor[color] || []).forEach(m => {
+        if (show) m.addTo(map);
+        else m.remove();
+      });
+    };
+
+    const initToggles = () => {
+      const ids = { GREEN: 'chk-green', YELLOW: 'chk-yellow', ORANGE: 'chk-orange', RED: 'chk-red' };
+      Object.entries(ids).forEach(([color, id]) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        // initial state: checked by default
+        el.checked = true;
+        el.addEventListener('change', () => {
+          toggleColor(color, el.checked);
+        });
+      });
+    };
+
+    // small "show all / none" convenience buttons if present
+    const btnAll = document.getElementById('btn-show-all');
+    const btnNone = document.getElementById('btn-show-none');
+    if (btnAll) btnAll.addEventListener('click', () => { ['GREEN','YELLOW','ORANGE','RED'].forEach(c => { document.getElementById(`chk-${c.toLowerCase()}`).checked = true; toggleColor(c, true); }); });
+    if (btnNone) btnNone.addEventListener('click', () => { ['GREEN','YELLOW','ORANGE','RED'].forEach(c => { document.getElementById(`chk-${c.toLowerCase()}`).checked = false; toggleColor(c, false); }); });
+
+    // initialize toggles after DOM ready
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initToggles);
+    else initToggles();
+
   } catch (err) {
     console.error("Error fetching volcano data:", err);
     console.error("If you see a CORS error, the public API may block direct browser requests. Try using a proxy or run fetch from a server-side environment.");
