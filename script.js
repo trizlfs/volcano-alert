@@ -1,10 +1,8 @@
-const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc7";
-
 (async () => {
-  // Map
-  const map = L.map("map").setView([37, -142], 4);
+  // Map Config
+  const map = L.map("map").setView([37, -142], 3);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 5,
+    maxZoom: 18,
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
@@ -27,7 +25,7 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
       return;
     }
 
-    // Filter to only YELLOW/ORANGE/RED and ensure vnum present
+    // Filter to ensure it only shows Yellow+ 
     const allowed = ["YELLOW", "ORANGE", "RED"];
     const filtered = items.filter(i => {
       const c = (i.color_code || i.color || "").toString().toUpperCase();
@@ -38,7 +36,7 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
       return;
     }
 
-    // Fetch per-volcano details (to obtain latitude/longitude). Best-effort; collect successes.
+    // Fetch location for volcanoes
     const detailPromises = filtered.map(async it => {
       const vnum = it.vnum || it.vn;
       try {
@@ -107,9 +105,7 @@ const API_KEY = "d1750a9be2de97ccedded32753dc658d4aa861289fa8027e73d4c991ad20bbc
     });
 
     if (bounds.length) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
-    // end marker creation
   } catch (err) {
-    // More descriptive error for common CORS/fetch issues
     console.error("Error fetching volcano data:", err);
     console.error("If you see a CORS error, the public API may block direct browser requests. Try using a proxy or run fetch from a server-side environment.");
   }
