@@ -1,4 +1,4 @@
-# Volcano Interactive Mapping
+# [Volcano Interactive Mapping](https://volcano-alert.pages.dev/)
 
 This is my open-source school project showing all actively monitored volcanos in the United States.
 Features Include
@@ -7,6 +7,4 @@ Features Include
 - Government Icons (Showing Alert and Color Level)
 - And more
 
-  Try the site [here](https://volcano-alert.pages.dev/)
-
-  -# I recommend uploading to Cloudflare's pages.dev for easy hosting and sites.
+  I recommend uploading to Cloudflare's pages.dev for easy hosting and sites.
