@@ -4,7 +4,7 @@
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
     minzoom: 2,
-    attribution: '&copy; OpenStreetMap contributors'
+    attribution: '&copy; Trizlfs, OpenStreetMap'
   }).addTo(map);
 
   map.createPane('pane-green');  map.getPane('pane-green').style.zIndex = 400;
