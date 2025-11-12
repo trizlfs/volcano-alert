@@ -1,7 +1,7 @@
 (async () => {
   // Map Config
   const map = L.map("map").setView([37, -142], 3);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}&layers=Y.png", {
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
     minzoom: 2,
     attribution: '&copy; Trizlfs, OpenStreetMap'
