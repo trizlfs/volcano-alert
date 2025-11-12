@@ -139,9 +139,11 @@
         const synopsis = summary.synopsis || detail.synopsis || detail.status || "";
         const alertLevel = summary.alert_level || summary.cap_level || detail.alert_level || "N/A";
         const noticeUrl = summary.notice_url || detail.notice_url || summary.notice_data || detail.notice_data || "";
+        const imageUrl = summary.volcano_image_url || detail.volcano_image_url || "";
 
         const popupHtml = `
           <div style="min-width:240px">
+            ${imageUrl ? `<div style="text-align:center"><img src="${imageUrl}" alt="${name} image" style="max-width:220px;max-height:140px;display:block;margin:6px auto;border-radius:4px" /></div>` : ""}
             <b>${name}</b> ${vnum ? `(<small>${vnum}</small>)` : ""}<br/>
             <b>Alert Level:</b> ${alertLevel}<br/>
             <b>Color Code:</b> ${colorCode}<br/>
@@ -210,9 +212,11 @@
         const pubDate = summary.pubDate || summary.sent_date_cap || detail.pubDate || "";
         const synopsis = summary.synopsis || detail.synopsis || detail.status || "";
         const noticeUrl = summary.notice_url || detail.notice_url || summary.notice_data || detail.notice_data || "";
+        const imageUrl = summary.volcano_image_url || detail.volcano_image_url || "";
 
         const popupHtml = `
           <div style="min-width:240px">
+            ${imageUrl ? `<div style="text-align:center"><img src="${imageUrl}" alt="${name} image" style="max-width:220px;max-height:140px;display:block;margin:6px auto;border-radius:4px" /></div>` : ""}
             <b>${name}</b> ${vnum ? `(<small>${vnum}</small>)` : ""}<br/>
             <b>Alert Level:</b> ${colorCode === 'UNASSIGNED' ? 'N/A' : 'Normal'}<br/>
             <b>Color Code:</b> ${colorCode}<br/>
