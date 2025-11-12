@@ -7,6 +7,7 @@
     attribution: '&copy; Trizlfs, OpenStreetMap'
   }).addTo(map);
 
+  map.createPane('pane-unassigned'); map.getPane('pane-unassigned').style.zIndex = 350;
   map.createPane('pane-green');  map.getPane('pane-green').style.zIndex = 400;
   map.createPane('pane-yellow'); map.getPane('pane-yellow').style.zIndex = 450;
   map.createPane('pane-orange'); map.getPane('pane-orange').style.zIndex = 500;
@@ -15,12 +16,14 @@
   const markersGroup = L.layerGroup().addTo(map);
   let activeMarkersVisible = true;
 
-  const markersByColor = { GREEN: [], YELLOW: [], ORANGE: [], RED: [] };
+  // include UNASSIGNED bucket
+  const markersByColor = { UNASSIGNED: [], GREEN: [], YELLOW: [], ORANGE: [], RED: [] };
 
   // Fetch Data
   const elevatedURL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getElevatedVolcanoes";
   const volcanoVnumURL = vnum => `https://volcanoes.usgs.gov/hans-public/api/volcano/getVolcano/${vnum}`;
-  const monitoredURL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getMonitoredVolcanoes";
+  // changed to US volcano list per request
+  const monitoredURL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getUSVolcanoes";
 
   try {
     const res = await fetch(elevatedURL);
@@ -40,9 +43,9 @@
     });
 
     const resMon = await fetch(monitoredURL);
-    if (!resMon.ok) throw new Error(`Monitored API Error ${resMon.status}`);
+    if (!resMon.ok) throw new Error(`USVolcanoes API Error ${resMon.status}`);
     const monitored = await resMon.json();
-    console.log("getMonitoredVolcanoes response:", monitored);
+    console.log("getUSVolcanoes response:", monitored);
 
     const monitoredItems = Array.isArray(monitored) ? monitored : (Array.isArray(monitored.result) ? monitored.result : []);
     const monitoredVnums = new Set(monitoredItems.map(mi => mi.vnum || mi.vn));
@@ -81,7 +84,7 @@
     });
 
     const ICON_MAP = {
-      UNASSIGNED: makeicon(ICON_URLS.UNASSIGNED),
+      UNASSIGNED: makeIcon(ICON_URLS.UNASSIGNED),
       GREEN: makeIcon(ICON_URLS.GREEN),
       YELLOW: makeIcon(ICON_URLS.YELLOW),
       ORANGE: makeIcon(ICON_URLS.ORANGE),
@@ -93,14 +96,15 @@
 
     const addMarker = (lat, lng, colorCode, popupHtml, vnum) => {
       const paneName = ({
+        UNASSIGNED: 'pane-unassigned',
         GREEN: 'pane-green',
         YELLOW: 'pane-yellow',
         ORANGE: 'pane-orange',
         RED: 'pane-red'
-      })[colorCode] || 'pane-green';
+      })[colorCode] || 'pane-unassigned';
 
       const marker = L.marker([lat, lng], {
-        icon: ICON_MAP[colorCode] || ICON_MAP.GREEN,
+        icon: ICON_MAP[colorCode] || ICON_MAP.UNASSIGNED,
         pane: paneName,
         title: popupHtml && popupHtml.replace(/<[^>]+>/g, '').slice(0, 200)
       }).bindPopup(popupHtml);
@@ -182,6 +186,14 @@
           return;
         }
 
+        // determine color; if unassigned/uninstrumented use UNASSIGNED, otherwise default to GREEN
+        let colorCode = (summary.color_code || summary.color || "").toString().toUpperCase();
+        if (!colorCode || colorCode === 'UNASSIGNED' || summary.instrumented === false || summary.uninstrumented === true) {
+          colorCode = 'UNASSIGNED';
+        } else if (!['GREEN','YELLOW','ORANGE','RED','UNASSIGNED'].includes(colorCode)) {
+          colorCode = 'GREEN';
+        }
+
         const name = summary.volcano_name_appended || summary.volcano_name || detail.volcano_name_appended || detail.volcano_name || "Unknown";
         const vnum = summary.vnum || summary.vn || detail.vnum || "";
         const obs = summary.obs_fullname || summary.obs || detail.obs_fullname || detail.obs || "N/A";
@@ -192,8 +204,8 @@
         const popupHtml = `
           <div style="min-width:240px">
             <b>${name}</b> ${vnum ? `(<small>${vnum}</small>)` : ""}<br/>
-            <b>Alert Level:</b> Normal<br/>
-            <b>Color Code:</b> GREEN<br/>
+            <b>Alert Level:</b> ${colorCode === 'UNASSIGNED' ? 'N/A' : 'Normal'}<br/>
+            <b>Color Code:</b> ${colorCode}<br/>
             <b>Observatory:</b> ${obs}<br/>
             <b>Elevation (m):</b> ${detail.elevation_meters ?? detail.elevation ?? "N/A"}<br/>
             ${synopsis ? `<div style="margin-top:6px"><i>${synopsis}</i></div>` : ""}
@@ -203,7 +215,7 @@
           </div>
         `;
 
-        addMarker(lat, lng, "GREEN", popupHtml, vnum);
+        addMarker(lat, lng, colorCode, popupHtml, vnum);
       });
     }
 
@@ -217,7 +229,7 @@
     };
 
     const initToggles = () => {
-      const ids = { GREEN: 'chk-green', YELLOW: 'chk-yellow', ORANGE: 'chk-orange', RED: 'chk-red' };
+      const ids = { UNASSIGNED: 'chk-unassigned', GREEN: 'chk-green', YELLOW: 'chk-yellow', ORANGE: 'chk-orange', RED: 'chk-red' };
       Object.entries(ids).forEach(([color, id]) => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -230,8 +242,8 @@
 
     const btnAll = document.getElementById('btn-show-all');
     const btnNone = document.getElementById('btn-show-none');
-    if (btnAll) btnAll.addEventListener('click', () => { ['GREEN','YELLOW','ORANGE','RED'].forEach(c => { document.getElementById(`chk-${c.toLowerCase()}`).checked = true; toggleColor(c, true); }); });
-    if (btnNone) btnNone.addEventListener('click', () => { ['GREEN','YELLOW','ORANGE','RED'].forEach(c => { document.getElementById(`chk-${c.toLowerCase()}`).checked = false; toggleColor(c, false); }); });
+    if (btnAll) btnAll.addEventListener('click', () => { ['UNASSIGNED','GREEN','YELLOW','ORANGE','RED'].forEach(c => { const el = document.getElementById(`chk-${c.toLowerCase()}`); if (el) { el.checked = true; toggleColor(c, true); } }); });
+    if (btnNone) btnNone.addEventListener('click', () => { ['UNASSIGNED','GREEN','YELLOW','ORANGE','RED'].forEach(c => { const el = document.getElementById(`chk-${c.toLowerCase()}`); if (el) { el.checked = false; toggleColor(c, false); } }); });
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initToggles);
     else initToggles();
