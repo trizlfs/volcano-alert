@@ -186,11 +186,21 @@
           return;
         }
 
-        // determine color; if unassigned/uninstrumented use UNASSIGNED, otherwise default to GREEN
-        let colorCode = (summary.color_code || summary.color || "").toString().toUpperCase();
-        if (!colorCode || colorCode === 'UNASSIGNED' || summary.instrumented === false || summary.uninstrumented === true) {
+        // determine color; if explicitly unassigned or uninstrumented use UNASSIGNED,
+        // if a valid color is provided use it, otherwise default to GREEN
+        const rawColor = (summary.color_code || summary.color || "").toString().toUpperCase();
+        const instrumentedFalse = summary.instrumented === false
+          || summary.instrumented === 'false'
+          || summary.uninstrumented === true
+          || summary.uninstrumented === 'true';
+
+        let colorCode;
+        if (rawColor === 'UNASSIGNED' || instrumentedFalse) {
           colorCode = 'UNASSIGNED';
-        } else if (!['GREEN','YELLOW','ORANGE','RED','UNASSIGNED'].includes(colorCode)) {
+        } else if (['GREEN','YELLOW','ORANGE','RED'].includes(rawColor)) {
+          colorCode = rawColor;
+        } else {
+          // no explicit color -> assume GREEN for monitored volcanoes unless flagged uninstrumented
           colorCode = 'GREEN';
         }
 
