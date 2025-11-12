@@ -66,6 +66,7 @@
 
     // Icon URLs
     const ICON_URLS = {
+      UNASSIGNED: "https://avo.alaska.edu/img/icons/svg/uninstrumented.svg",
       GREEN: "https://avo.alaska.edu/img/icons/svg/triangle.svg",
       YELLOW: "https://avo.alaska.edu/img/icons/svg/yellowtriangle.svg",
       ORANGE: "https://avo.alaska.edu/img/icons/svg/eyecon-orange.svg",
@@ -80,6 +81,7 @@
     });
 
     const ICON_MAP = {
+      UNASSIGNED: makeicon(ICON_URLS.UNASSIGNED),
       GREEN: makeIcon(ICON_URLS.GREEN),
       YELLOW: makeIcon(ICON_URLS.YELLOW),
       ORANGE: makeIcon(ICON_URLS.ORANGE),
