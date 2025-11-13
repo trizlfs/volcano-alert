@@ -1,11 +1,36 @@
 (async () => {
   // Map Configurations
   const map = L.map("map").setView([37, -142], 3);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 18,
-    minzoom: 2,
-    attribution: '&copy; Trizlfs, OpenStreetMap'
-  }).addTo(map);
+
+  // Define multiple base layers
+  const baseLayers = {
+    "Default Map": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      minZoom: 2,
+      attribution: '&copy; Trizlfs, OpenStreetMap'
+    }),
+
+    "Satellite": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 18,
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, USDA, USGS'
+    }),
+
+    "Topographic": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+      maxZoom: 17,
+      attribution: '&copy; OpenTopoMap, SRTM, OpenStreetMap contributors'
+    }),
+
+    "Terrain (Google-like)": L.tileLayer("https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg", {
+      maxZoom: 18,
+      attribution: '&copy; Stamen Design, OpenStreetMap'
+    })
+  };
+
+  // Add one as the default
+  baseLayers["Default Map"].addTo(map);
+
+  // Add control for switching
+  L.control.layers(baseLayers, null, { collapsed: false }).addTo(map);
 
   // Creates Panes for Markers allowing for disabling, and layer control.
   map.createPane('pane-unassigned'); map.getPane('pane-unassigned').style.zIndex = 350;
