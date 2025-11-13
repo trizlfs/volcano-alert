@@ -1,5 +1,5 @@
 (async () => {
-  // Map Config
+  // Map Configurations
   const map = L.map("map").setView([37, -142], 3);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
@@ -7,6 +7,7 @@
     attribution: '&copy; Trizlfs, OpenStreetMap'
   }).addTo(map);
 
+  // Creates Panes for Markers allowing for disabling, and layer control.
   map.createPane('pane-unassigned'); map.getPane('pane-unassigned').style.zIndex = 350;
   map.createPane('pane-green');  map.getPane('pane-green').style.zIndex = 400;
   map.createPane('pane-yellow'); map.getPane('pane-yellow').style.zIndex = 450;
@@ -16,15 +17,16 @@
   const markersGroup = L.layerGroup().addTo(map);
   let activeMarkersVisible = true;
 
-  // include UNASSIGNED bucket
+  // Collects Data for each Volcano based on Color Code
   const markersByColor = { UNASSIGNED: [], GREEN: [], YELLOW: [], ORANGE: [], RED: [] };
 
-  // Fetch Data
+  // All API Endpoints where we can fetch our Data
   const elevatedURL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getElevatedVolcanoes";
   const volcanoVnumURL = vnum => `https://volcanoes.usgs.gov/hans-public/api/volcano/getVolcano/${vnum}`;
   // changed to US volcano list per request
   const monitoredURL = "https://volcanoes.usgs.gov/hans-public/api/volcano/getUSVolcanoes";
 
+  // First Focuses on fetching Elevated Volcanoes in case of the regular API failing or being slow.
   try {
     const res = await fetch(elevatedURL);
     if (!res.ok) throw new Error(`API Error ${res.status}`);
@@ -35,13 +37,13 @@
     if (!items.length) {
       console.warn("No elevated volcanoes found.");
     }
-
+  
     const allowed = ["YELLOW", "ORANGE", "RED"];
     const filtered = items.filter(i => {
       const c = (i.color_code || i.color || "").toString().toUpperCase();
       return allowed.includes(c) && (i.vnum || i.vn);
     });
-
+    // Now we fetch the other volcanoes as the elvated ones have been processed..
     const resMon = await fetch(monitoredURL);
     if (!resMon.ok) throw new Error(`USVolcanoes API Error ${resMon.status}`);
     const monitored = await resMon.json();
@@ -50,7 +52,7 @@
     const monitoredItems = Array.isArray(monitored) ? monitored : (Array.isArray(monitored.result) ? monitored.result : []);
     const monitoredVnums = new Set(monitoredItems.map(mi => mi.vnum || mi.vn));
 
-    // Fetch location for elevated volcanoes
+    // Due to the API's data not providing locations, we go to a second API which will give details for each volcano.
     const detailPromises = filtered.map(async it => {
       const vnum = it.vnum || it.vn;
       try {
@@ -67,7 +69,8 @@
 
     const resolved = (await Promise.all(detailPromises)).filter(Boolean);
 
-    // Icon URLs
+    // These are the Icons for each Color Code, which is the goverment icon used by the USGS, 
+    // (Due to how hard it was to get these, we resulted to the Alaska Volcano Observatory for getting the icons directly.)
     const ICON_URLS = {
       UNASSIGNED: "https://avo.alaska.edu/img/icons/svg/uninstrumented.svg",
       GREEN: "https://avo.alaska.edu/img/icons/svg/triangle.svg",
@@ -75,14 +78,14 @@
       ORANGE: "https://avo.alaska.edu/img/icons/svg/eyecon-orange.svg",
       RED: "https://avo.alaska.edu/img/icons/svg/danger.svg"
     };
-
+    // Makes each Volcano Icon
     const makeIcon = url => L.icon({
       iconUrl: url,
       iconSize: [28, 28],
       iconAnchor: [14, 28],
       popupAnchor: [0, -28]
     });
-
+    // This is the Icon map which allows adds the icons directly to the map, so they can move around, and not be static.
     const ICON_MAP = {
       UNASSIGNED: makeIcon(ICON_URLS.UNASSIGNED),
       GREEN: makeIcon(ICON_URLS.GREEN),
@@ -93,7 +96,7 @@
 
     const bounds = [];
     const shownVnums = new Set();
-
+    // This actually adds the icons to the map, where the ICON_MAP configured them.
     const addMarker = (lat, lng, colorCode, popupHtml, vnum) => {
       const paneName = ({
         UNASSIGNED: 'pane-unassigned',
@@ -120,7 +123,7 @@
       return marker;
     };
 
-    // Add elevated (YELLOW/ORANGE/RED)
+    // This is where we get the volcano data for the elevated volcanoes.
     if (resolved && resolved.length) {
       resolved.forEach(({ summary, detail }) => {
         const colorCode = (summary.color_code || summary.color || "").toString().toUpperCase();
@@ -131,7 +134,7 @@
           console.warn("Missing coords for vnum", summary.vnum || summary.vn, detail);
           return;
         }
-
+        // This is Data from the APIs which we use when you click on a volcano icon.
         const name = summary.volcano_name_appended || summary.volcano_name || detail.volcano_name_appended || detail.volcano_name || "Unknown";
         const vnum = summary.vnum || summary.vn || detail.vnum || "";
         const obs = summary.obs_fullname || summary.obs || detail.obs_fullname || detail.obs || "N/A";
@@ -140,7 +143,7 @@
         const alertLevel = summary.alert_level || summary.cap_level || detail.alert_level || "N/A";
         const noticeUrl = summary.notice_url || detail.notice_url || summary.notice_data || detail.notice_data || "";
         const imageUrl = summary.volcano_image_url || detail.volcano_image_url || "";
-
+        // This is the text/box shown when you click on a volcano icon.
         const popupHtml = `
           <div style="min-width:240px">
             ${imageUrl ? `<div style="text-align:center"><img src="${imageUrl}" alt="${name} image" style="max-width:220px;max-height:140px;display:block;margin:6px auto;border-radius:4px" /></div>` : ""}
@@ -188,8 +191,7 @@
           return;
         }
 
-        // determine color; if explicitly unassigned or uninstrumented use UNASSIGNED,
-        // if a valid color is provided use it, otherwise default to GREEN
+        // This finds if a color is actually assigned, and if not, assumes GREEN unless marked uninstrumented.
         const rawColor = (summary.color_code || summary.color || "").toString().toUpperCase();
         const instrumentedFalse = summary.instrumented === false
           || summary.instrumented === 'false'
@@ -202,10 +204,10 @@
         } else if (['GREEN','YELLOW','ORANGE','RED'].includes(rawColor)) {
           colorCode = rawColor;
         } else {
-          // no explicit color -> assume GREEN for monitored volcanoes unless flagged uninstrumented
+          // If No color assigned, assumes GREEN
           colorCode = 'GREEN';
         }
-
+        // This is Data from the APIs which we use when you click on a volcano icon.
         const name = summary.volcano_name_appended || summary.volcano_name || detail.volcano_name_appended || detail.volcano_name || "Unknown";
         const vnum = summary.vnum || summary.vn || detail.vnum || "";
         const obs = summary.obs_fullname || summary.obs || detail.obs_fullname || detail.obs || "N/A";
@@ -213,7 +215,7 @@
         const synopsis = summary.synopsis || detail.synopsis || detail.status || "";
         const noticeUrl = summary.notice_url || detail.notice_url || summary.notice_data || detail.notice_data || "";
         const imageUrl = summary.volcano_image_url || detail.volcano_image_url || "";
-
+        // This is the text/box shown when you click on a volcano icon.
         const popupHtml = `
           <div style="min-width:240px">
             ${imageUrl ? `<div style="text-align:center"><img src="${imageUrl}" alt="${name} image" style="max-width:220px;max-height:140px;display:block;margin:6px auto;border-radius:4px" /></div>` : ""}
@@ -234,14 +236,14 @@
     }
 
     if (bounds.length) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 8 });
-
+    // This function toggles the visibility of markers based on their color code.
     const toggleColor = (color, show) => {
       (markersByColor[color] || []).forEach(m => {
         if (show) m.addTo(map);
         else m.remove();
       });
     };
-
+    // This is the part that takes the data from the checkboxes and applies them to the map.
     const initToggles = () => {
       const ids = { UNASSIGNED: 'chk-unassigned', GREEN: 'chk-green', YELLOW: 'chk-yellow', ORANGE: 'chk-orange', RED: 'chk-red' };
       Object.entries(ids).forEach(([color, id]) => {
@@ -253,12 +255,13 @@
         });
       });
     };
-
+    // This part adds the buttons to show all or none of the volcanoes.
     const btnAll = document.getElementById('btn-show-all');
     const btnNone = document.getElementById('btn-show-none');
     if (btnAll) btnAll.addEventListener('click', () => { ['UNASSIGNED','GREEN','YELLOW','ORANGE','RED'].forEach(c => { const el = document.getElementById(`chk-${c.toLowerCase()}`); if (el) { el.checked = true; toggleColor(c, true); } }); });
     if (btnNone) btnNone.addEventListener('click', () => { ['UNASSIGNED','GREEN','YELLOW','ORANGE','RED'].forEach(c => { const el = document.getElementById(`chk-${c.toLowerCase()}`); if (el) { el.checked = false; toggleColor(c, false); } }); });
 
+    // The rest down here ensures the toggles are initialized, data is loaded and is any other errors are caught.
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initToggles);
     else initToggles();
 
