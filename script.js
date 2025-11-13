@@ -18,11 +18,6 @@
     "Topographic": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
       maxZoom: 17,
       attribution: '&copy; OpenTopoMap, SRTM, OpenStreetMap contributors'
-    }),
-
-    "Terrain (Google-like)": L.tileLayer("https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg", {
-      maxZoom: 18,
-      attribution: '&copy; Stamen Design, OpenStreetMap'
     })
   };
 
