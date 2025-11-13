@@ -2,7 +2,7 @@
   // Map Configurations
   const map = L.map("map").setView([37, -142], 3);
 
-  // Define multiple base layers
+  // Defines multiple Maps for OPTIONS!
   const baseLayers = {
     "Default Map": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 18,
@@ -21,10 +21,10 @@
     })
   };
 
-  // Add one as the default
+  // Default Map as the one that is automatically enabled
   baseLayers["Default Map"].addTo(map);
 
-  // Add control for switching
+  // Added Map controll (Designed in index.html)
   L.control.layers(baseLayers, null, { collapsed: false }).addTo(map);
 
   // Creates Panes for Markers allowing for disabling, and layer control.
@@ -281,10 +281,9 @@
     if (btnAll) btnAll.addEventListener('click', () => { ['UNASSIGNED','GREEN','YELLOW','ORANGE','RED'].forEach(c => { const el = document.getElementById(`chk-${c.toLowerCase()}`); if (el) { el.checked = true; toggleColor(c, true); } }); });
     if (btnNone) btnNone.addEventListener('click', () => { ['UNASSIGNED','GREEN','YELLOW','ORANGE','RED'].forEach(c => { const el = document.getElementById(`chk-${c.toLowerCase()}`); if (el) { el.checked = false; toggleColor(c, false); } }); });
 
-    // The rest down here ensures the toggles are initialized, data is loaded and is any other errors are caught.
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initToggles);
     else initToggles();
-
+    // Ensures the API didnt fail, or if theres errors with either broswers, or code.
   } catch (err) {
     console.error("Error fetching volcano data:", err);
     console.error("If you see a CORS error, the public API may block direct browser requests. Try using a proxy or run fetch from a server-side environment.");
