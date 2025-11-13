@@ -7,7 +7,7 @@
     "Default Map": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 18,
       minZoom: 2,
-      attribution: '&copy; Trizlfs, OpenStreetMap'
+      attribution: '&copy; OpenStreetMap Contributors'
     }),
 
     "Satellite": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
@@ -17,7 +17,7 @@
 
     "Topographic": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
       maxZoom: 17,
-      attribution: '&copy; OpenTopoMap, SRTM, OpenStreetMap contributors'
+      attribution: '&copy; OpenTopoMap, SRTM, OpenStreetMap Contributors'
     })
   };
 
